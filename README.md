@@ -4,9 +4,9 @@ This action ensures that pull requests cannot be merged until required checklist
 
 ## How It Works
 
-Provide a newline-separated list of checklist labels. When a pull request includes any of those labels in its description, the action verifies that each one is checked (e.g. `- [x] Label`). If any matching items remain unchecked, the action fails.
+The action reads the enforced checklist items from `config/checklist-items.txt`. When a pull request includes any of those labels in its description, the action verifies that each one is checked (e.g. `- [x] Label`). If any matching items remain unchecked, the action fails.
 
-Checklist entries that are not present in the PR description are ignored, allowing teams to include optional checklist blocks without blocking merges when they are omitted.
+Checklist entries that are not present in the PR description are ignored, allowing teams to include optional checklist blocks without blocking merges when they are omitted. To customize which items are enforced, edit `config/checklist-items.txt` in this repository.
 
 ## Usage
 
@@ -24,11 +24,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Enforce PR checklist
         uses: ./
-        with:
-          checklist_lines: |
-            Tests written or updated
-            Documentation updated
-            Product sign-off received
 ```
 
 In the example above, if the pull request description contains any of the following:

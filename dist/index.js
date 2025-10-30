@@ -1,20 +1,30 @@
 const fs = require('fs');
-
-function getInput(name, { required = false } = {}) {
-  const key = `INPUT_${name.replace(/ /g, '_').toUpperCase()}`;
-  const value = process.env[key] ? process.env[key].trim() : '';
-  if (required && !value) {
-    console.error(`Input "${name}" is required but was not provided.`);
-    process.exit(1);
-  }
-  return value;
-}
+const path = require('path');
 
 function parseChecklistConfig(raw) {
   return raw
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+}
+
+function loadConfiguredItems() {
+  const configPath = path.resolve(__dirname, '../config/checklist-items.txt');
+  let raw;
+  try {
+    raw = fs.readFileSync(configPath, 'utf8');
+  } catch (error) {
+    console.error(`Failed to read checklist config at ${configPath}: ${error.message}`);
+    process.exit(1);
+  }
+
+  const configuredItems = parseChecklistConfig(raw);
+  if (configuredItems.length === 0) {
+    console.error(`Checklist config at ${configPath} is empty. Add at least one checklist line.`);
+    process.exit(1);
+  }
+
+  return configuredItems;
 }
 
 function readPullRequestBody() {
@@ -75,14 +85,7 @@ function evaluateChecklist(configuredItems, checklistLines) {
 }
 
 function main() {
-  const rawConfig = getInput('checklist_lines', { required: true });
-  const configuredItems = parseChecklistConfig(rawConfig);
-
-  if (configuredItems.length === 0) {
-    console.error('No checklist lines configured. Provide at least one checklist line.');
-    process.exit(1);
-  }
-
+  const configuredItems = loadConfiguredItems();
   const prBody = readPullRequestBody();
   const checklistLines = extractChecklistEntries(prBody);
   const uncheckedItems = evaluateChecklist(configuredItems, checklistLines);
