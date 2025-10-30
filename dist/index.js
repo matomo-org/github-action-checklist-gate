@@ -86,6 +86,7 @@ function parseChecklistLine(line) {
 // Inspect PR checklist lines against the enforced items and collect failures.
 function evaluateChecklist(configuredItems, checklistLines) {
   const uncheckedItems = [];
+  const missingItems = [];
 
   for (const item of configuredItems) {
     const matches = checklistLines
@@ -93,6 +94,7 @@ function evaluateChecklist(configuredItems, checklistLines) {
       .filter((entry) => entry && entry.label === item);
 
     if (matches.length === 0) {
+      missingItems.push(item);
       continue;
     }
 
@@ -102,7 +104,7 @@ function evaluateChecklist(configuredItems, checklistLines) {
     }
   }
 
-  return uncheckedItems;
+  return { missingItems, uncheckedItems };
 }
 
 // Entrypoint for the action: load config, evaluate PR body, and fail if needed.
@@ -110,11 +112,19 @@ function main() {
   const configuredItems = loadConfiguredItems();
   const prBody = readPullRequestBody();
   const checklistLines = extractChecklistEntries(prBody);
-  const uncheckedItems = evaluateChecklist(configuredItems, checklistLines);
+  const { missingItems, uncheckedItems } = evaluateChecklist(configuredItems, checklistLines);
 
-  if (uncheckedItems.length > 0) {
-    console.error('Pull request is missing required checklist approvals:');
-    uncheckedItems.forEach((item) => console.error(`- [ ] ${item}`));
+  if (missingItems.length > 0 || uncheckedItems.length > 0) {
+    if (missingItems.length > 0) {
+      console.error('Pull request is missing required checklist items:');
+      missingItems.forEach((item) => console.error(`- ${item}`));
+    }
+
+    if (uncheckedItems.length > 0) {
+      console.error('Pull request has unchecked required checklist items:');
+      uncheckedItems.forEach((item) => console.error(`- [ ] ${item}`));
+    }
+
     process.exit(1);
   }
 

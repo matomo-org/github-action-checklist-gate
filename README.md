@@ -10,7 +10,7 @@ The action reads the enforced checklist items from `config/checklist-items.txt`.
 - Documentation updated
 - Product sign-off received
 
-Checklist entries that are not present in the PR description are ignored, allowing teams to include optional checklist blocks without blocking merges when they are omitted. To customize which items are enforced, edit `config/checklist-items.txt` in this repository.
+Checklist entries that are not present in the PR description also trigger a failure, ensuring authors explicitly acknowledge every required item. The action reports missing items separately from unchecked items so reviewers can see what needs attention at a glance. To customize which items are enforced, edit `config/checklist-items.txt` in this repository.
 
 ## Usage
 
