@@ -84,3 +84,29 @@ for (const entry of rawDataProvider) {
     }
   });
 }
+
+test('Checklist item missing from PR body should FAIL', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
+  const eventPath = path.join(tmpDir, 'event.json');
+  const payload = {
+    pull_request: {
+      body: '',
+    },
+  };
+
+  fs.writeFileSync(eventPath, JSON.stringify(payload), 'utf8');
+
+  const result = spawnSync(process.execPath, [actionEntry], {
+    env: {
+      ...process.env,
+      GITHUB_EVENT_PATH: eventPath,
+    },
+    encoding: 'utf8',
+  });
+
+  assert.notStrictEqual(
+    result.status,
+    0,
+    `Expected failure when checklist item is missing. stdout: ${result.stdout}, stderr: ${result.stderr}`
+  );
+});
