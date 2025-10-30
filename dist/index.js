@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+// Parse newline-delimited checklist configuration into trimmed entries.
 function parseChecklistConfig(raw) {
   return raw
     .split(/\r?\n/)
@@ -8,6 +9,7 @@ function parseChecklistConfig(raw) {
     .filter((line) => line.length > 0);
 }
 
+// Load enforced checklist items from the bundled config file.
 function loadConfiguredItems() {
   const configPath = path.resolve(__dirname, '../config/checklist-items.txt');
   let raw;
@@ -27,6 +29,7 @@ function loadConfiguredItems() {
   return configuredItems;
 }
 
+// Read and validate the pull request body from the event payload.
 function readPullRequestBody() {
   const eventPath = process.env.GITHUB_EVENT_PATH;
   if (!eventPath) {
@@ -50,14 +53,17 @@ function readPullRequestBody() {
   return typeof payload.pull_request.body === 'string' ? payload.pull_request.body : '';
 }
 
+// Trim whitespace around a checklist line's textual content.
 function normalizeChecklistLine(line) {
   return line.trim();
 }
 
+// Extract checklist candidates line-by-line from the PR description.
 function extractChecklistEntries(prBody) {
   return prBody.split(/\r?\n/).map((line) => line.trim());
 }
 
+// Inspect PR checklist lines against the enforced items and collect failures.
 function evaluateChecklist(configuredItems, checklistLines) {
   const uncheckedItems = [];
 
@@ -84,6 +90,7 @@ function evaluateChecklist(configuredItems, checklistLines) {
   return uncheckedItems;
 }
 
+// Entrypoint for the action: load config, evaluate PR body, and fail if needed.
 function main() {
   const configuredItems = loadConfiguredItems();
   const prBody = readPullRequestBody();
