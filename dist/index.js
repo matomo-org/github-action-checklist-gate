@@ -107,6 +107,11 @@ function evaluateChecklist(configuredItems, checklistLines) {
   return { missingItems, uncheckedItems };
 }
 
+// Emit a GitHub workflow error annotation for visibility in the Checks UI.
+function emitErrorAnnotation(message) {
+  console.error(`::error title=Checklist Gate::${message}`);
+}
+
 // Entrypoint for the action: load config, evaluate PR body, and fail if needed.
 function main() {
   const configuredItems = loadConfiguredItems();
@@ -117,12 +122,18 @@ function main() {
   if (missingItems.length > 0 || uncheckedItems.length > 0) {
     if (missingItems.length > 0) {
       console.error('Pull request is missing required checklist items:');
-      missingItems.forEach((item) => console.error(`- ${item}`));
+      missingItems.forEach((item) => {
+        console.error(`- ${item}`);
+        emitErrorAnnotation(`Checklist item not present in PR body: ${item}`);
+      });
     }
 
     if (uncheckedItems.length > 0) {
       console.error('Pull request has unchecked required checklist items:');
-      uncheckedItems.forEach((item) => console.error(`- [ ] ${item}`));
+      uncheckedItems.forEach((item) => {
+        console.error(`- [ ] ${item}`);
+        emitErrorAnnotation(`Checklist item present but unchecked: ${item}`);
+      });
     }
 
     process.exit(1);
