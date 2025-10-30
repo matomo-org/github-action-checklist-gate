@@ -24,6 +24,7 @@ test.after(() => {
 
 const rawDataProvider = [
   'Test line FAIL',
+  'Test line extra data FAIL',
   '[] Test line FAIL',
   '[ ] Test line FAIL',
   '[x] Test line PASS',
