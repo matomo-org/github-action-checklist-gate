@@ -53,14 +53,34 @@ function readPullRequestBody() {
   return typeof payload.pull_request.body === 'string' ? payload.pull_request.body : '';
 }
 
-// Trim whitespace around a checklist line's textual content.
-function normalizeChecklistLine(line) {
-  return line.trim();
-}
-
 // Extract checklist candidates line-by-line from the PR description.
 function extractChecklistEntries(prBody) {
   return prBody.split(/\r?\n/).map((line) => line.trim());
+}
+
+// Parse a Markdown checklist line into a structured record or null if unsupported.
+function parseChecklistLine(line) {
+  if (!(line.startsWith('- [') || line.startsWith('* ['))) {
+    return null;
+  }
+
+  const statusChar = line.charAt(3);
+  if (!['x', 'X', ' '].includes(statusChar)) {
+    return null;
+  }
+
+  const closingBracketIndex = line.indexOf(']');
+  if (closingBracketIndex === -1) {
+    return null;
+  }
+
+  const label = line.slice(closingBracketIndex + 1).trim();
+  if (!label) {
+    return null;
+  }
+
+  const checked = statusChar === 'x' || statusChar === 'X';
+  return { label, checked };
 }
 
 // Inspect PR checklist lines against the enforced items and collect failures.
@@ -68,20 +88,15 @@ function evaluateChecklist(configuredItems, checklistLines) {
   const uncheckedItems = [];
 
   for (const item of configuredItems) {
-    const matchingLines = checklistLines.filter((line) => {
-      if (!/^[*-]\s+\[[ xX]\]/.test(line)) {
-        return false;
-      }
+    const matches = checklistLines
+      .map((line) => parseChecklistLine(line))
+      .filter((entry) => entry && entry.label === item);
 
-      const content = normalizeChecklistLine(line.replace(/^[*-]\s+\[[ xX]\]\s*/, ''));
-      return content === item;
-    });
-
-    if (matchingLines.length === 0) {
+    if (matches.length === 0) {
       continue;
     }
 
-    const isChecked = matchingLines.some((line) => /\[[xX]\]/.test(line));
+    const isChecked = matches.some((entry) => entry.checked);
     if (!isChecked) {
       uncheckedItems.push(item);
     }
