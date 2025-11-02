@@ -22,36 +22,24 @@ test.after(() => {
   fs.writeFileSync(configPath, originalConfigContent, 'utf8');
 });
 
-const rawDataProvider = [
-  'Test line FAIL',
-  'Test line extra data FAIL',
-  '[] Test line FAIL',
-  '[ ] Test line FAIL',
-  '[x] Test line PASS',
-  '[X] Test line PASS',
+const scenarios = [
+  { line: '- [✔] Test line', expectation: 'PASS' },
+  { line: '- [✖] Test line', expectation: 'FAIL' },
+  { line: '- [NA] Test line', expectation: 'PASS' },
+  { line: '- [na] Test line', expectation: 'PASS' },
+  { line: '- [x] Test line', expectation: 'FAIL' },
+  { line: '- [ ] Test line', expectation: 'FAIL' },
+  { line: '- [pending] Test line', expectation: 'FAIL' },
+  { line: '- Test line', expectation: 'FAIL' },
+  { line: 'Test line', expectation: 'FAIL' },
+  { line: "Other line\n [NA] Test line", expectation: 'PASS' },
+  { line: "Other line", expectation: 'FAIL' },
 ];
 
-function buildChecklistLine(template) {
-  let normalized = template;
+for (const { line, expectation } of scenarios) {
+  const prBody = `${line}\n`;
 
-  if (normalized.startsWith('[]')) {
-    normalized = normalized.replace('[]', '[ ]');
-  }
-
-  if (normalized.startsWith('[')) {
-    return `- ${normalized}`;
-  }
-
-  return `- [ ] ${normalized}`;
-}
-
-for (const entry of rawDataProvider) {
-  const expectation = entry.endsWith('PASS') ? 'PASS' : 'FAIL';
-  const template = entry.slice(0, -expectation.length).trim();
-  const checklistLine = buildChecklistLine(template);
-  const prBody = `${checklistLine}\n`;
-
-  test(`Checklist "${template}" should ${expectation}`, () => {
+  test(`Checklist "${line}" should ${expectation}`, () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
     const eventPath = path.join(tmpDir, 'event.json');
     const payload = {
