@@ -71,6 +71,39 @@ test('Checklist status permutations', () => {
   }
 });
 
+test('Checklist handles multi-line PR bodies', () => {
+  const prBody = [
+    'Summary of changes',
+    '- plain bullet without brackets',
+    '- [✔] Test line',
+    'Follow-up notes and links',
+  ].join('\n');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
+  const eventPath = path.join(tmpDir, 'event.json');
+  const payload = {
+    pull_request: {
+      body: prBody,
+    },
+  };
+
+  fs.writeFileSync(eventPath, JSON.stringify(payload), 'utf8');
+
+  const result = spawnSync(process.execPath, [actionEntry], {
+    env: {
+      ...process.env,
+      GITHUB_EVENT_PATH: eventPath,
+    },
+    encoding: 'utf8',
+  });
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `Expected mixed-content PR body to pass. stdout: ${result.stdout}, stderr: ${result.stderr}`
+  );
+});
+
 test('Checklist item missing from PR body should FAIL', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
   const eventPath = path.join(tmpDir, 'event.json');
