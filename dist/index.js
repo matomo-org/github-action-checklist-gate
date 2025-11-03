@@ -60,8 +60,8 @@ function extractChecklistEntries(prBody) {
 
 // Parse a Markdown checklist line into a structured record or null if unsupported.
 function parseChecklistLine(line) {
-  // Accept Markdown list items containing a single status token inside the brackets, e.g. "- [✔] Label".
-  const match = line.match(/^[-*]\s*\[([^\]]+)\]\s*(.+)$/);
+  // Accept Markdown checklist items.
+  const match = line.match(/\[(.*?)\]\s*(.+)/);
   if (!match) {
     return null;
   }
