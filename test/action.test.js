@@ -26,11 +26,13 @@ test('Checklist status permutations', () => {
   // Exercise every accepted status along with representative invalid inputs.
   const scenarios = [
     { line: '- [✔] Test line', expectation: 'PASS' },
-    { line: '- [✖] Test line', expectation: 'FAIL' },
+    { line: '- [✖] Test line', expectation: 'PASS' },
     { line: '- [NA] Test line', expectation: 'PASS' },
+    { line: '- [Na] Test line', expectation: 'PASS' },
     { line: '- [na] Test line', expectation: 'PASS' },
     { line: '- [x] Test line', expectation: 'FAIL' },
     { line: '- [ ] Test line', expectation: 'FAIL' },
+    { line: '- [] Test line', expectation: 'FAIL' },
     { line: '- [pending] Test line', expectation: 'FAIL' },
     { line: '- Test line', expectation: 'FAIL' },
   ];

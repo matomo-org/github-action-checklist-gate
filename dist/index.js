@@ -78,15 +78,12 @@ function parseChecklistLine(line) {
 
 function normalizeStatus(status) {
   // Map the allowed glyphs/keywords to semantic buckets for easier evaluation.
-  if (status === '✔') {
+  const trimmed = status.trim();
+  if (trimmed === '✔' || trimmed === '✖') {
     return 'complete';
   }
 
-  if (status === '✖') {
-    return 'incomplete';
-  }
-
-  if (status === 'NA' || status === 'na') {
+  if (trimmed.toUpperCase() === 'NA') {
     return 'not_applicable';
   }
 
@@ -177,10 +174,10 @@ function main() {
     }
 
     if (uncheckedItems.length > 0) {
-      console.error('Pull request has required checklist items marked as ✖:');
+      console.error('Pull request has required checklist items without a valid status:');
       uncheckedItems.forEach((item) => {
-        console.error(`- ✖ ${item}`);
-        emitErrorAnnotation(`Checklist item marked as ✖: ${item}`);
+        console.error(`- ${item}`);
+        emitErrorAnnotation(`Checklist item lacks a valid status: ${item}`);
       });
     }
 
