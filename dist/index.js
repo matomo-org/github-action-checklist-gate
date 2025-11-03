@@ -60,33 +60,44 @@ function extractChecklistEntries(prBody) {
 
 // Parse a Markdown checklist line into a structured record or null if unsupported.
 function parseChecklistLine(line) {
-  if (!(line.startsWith('- [') || line.startsWith('* ['))) {
+  // Accept Markdown list items containing a single status token inside the brackets, e.g. "- [✔] Label".
+  const match = line.match(/^[-*]\s*\[([^\]]+)\]\s*(.+)$/);
+  if (!match) {
     return null;
   }
 
-  const statusChar = line.charAt(3);
-  if (!['x', 'X', ' '].includes(statusChar)) {
-    return null;
-  }
+  const status = match[1].trim();
+  const label = match[2].trim();
 
-  const closingBracketIndex = line.indexOf(']');
-  if (closingBracketIndex === -1) {
-    return null;
-  }
-
-  const label = line.slice(closingBracketIndex + 1).trim();
   if (!label) {
     return null;
   }
 
-  const checked = statusChar === 'x' || statusChar === 'X';
-  return { label, checked };
+  return { label, status };
+}
+
+function normalizeStatus(status) {
+  // Map the allowed glyphs/keywords to semantic buckets for easier evaluation.
+  if (status === '✔') {
+    return 'complete';
+  }
+
+  if (status === '✖') {
+    return 'incomplete';
+  }
+
+  if (status === 'NA' || status === 'na') {
+    return 'not_applicable';
+  }
+
+  return 'invalid';
 }
 
 // Inspect PR checklist lines against the enforced items and collect failures.
 function evaluateChecklist(configuredItems, checklistLines) {
   const uncheckedItems = [];
   const missingItems = [];
+  const invalidStatusItems = [];
 
   for (const item of configuredItems) {
     const matches = checklistLines
@@ -98,13 +109,36 @@ function evaluateChecklist(configuredItems, checklistLines) {
       continue;
     }
 
-    const isChecked = matches.some((entry) => entry.checked);
-    if (!isChecked) {
+    const invalidStatuses = new Set();
+    let hasPassingStatus = false;
+    let hasValidStatus = false;
+
+    for (const entry of matches) {
+      // Track whether we encountered any unsupported status values so we can report them explicitly.
+      const normalized = normalizeStatus(entry.status);
+      if (normalized === 'invalid') {
+        invalidStatuses.add(entry.status || '(empty)');
+        continue;
+      }
+
+      hasValidStatus = true;
+
+      if (normalized === 'complete' || normalized === 'not_applicable') {
+        hasPassingStatus = true;
+      }
+    }
+
+    if (invalidStatuses.size > 0) {
+      invalidStatusItems.push({ item, statuses: Array.from(invalidStatuses) });
+      continue;
+    }
+
+    if (!hasValidStatus || !hasPassingStatus) {
       uncheckedItems.push(item);
     }
   }
 
-  return { missingItems, uncheckedItems };
+  return { missingItems, uncheckedItems, invalidStatusItems };
 }
 
 // Emit a GitHub workflow error annotation for visibility in the Checks UI.
@@ -117,9 +151,12 @@ function main() {
   const configuredItems = loadConfiguredItems();
   const prBody = readPullRequestBody();
   const checklistLines = extractChecklistEntries(prBody);
-  const { missingItems, uncheckedItems } = evaluateChecklist(configuredItems, checklistLines);
+  const { missingItems, uncheckedItems, invalidStatusItems } = evaluateChecklist(
+    configuredItems,
+    checklistLines
+  );
 
-  if (missingItems.length > 0 || uncheckedItems.length > 0) {
+  if (missingItems.length > 0 || uncheckedItems.length > 0 || invalidStatusItems.length > 0) {
     if (missingItems.length > 0) {
       console.error('Pull request is missing required checklist items:');
       missingItems.forEach((item) => {
@@ -128,11 +165,22 @@ function main() {
       });
     }
 
+    if (invalidStatusItems.length > 0) {
+      console.error('Pull request has checklist items with unsupported status values:');
+      invalidStatusItems.forEach(({ item, statuses }) => {
+        const formattedStatuses = statuses.join(', ');
+        console.error(`- ${item}: ${formattedStatuses}`);
+        emitErrorAnnotation(
+          `Checklist item uses unsupported status (${formattedStatuses}): ${item}`
+        );
+      });
+    }
+
     if (uncheckedItems.length > 0) {
-      console.error('Pull request has unchecked required checklist items:');
+      console.error('Pull request has required checklist items marked as ✖:');
       uncheckedItems.forEach((item) => {
-        console.error(`- [ ] ${item}`);
-        emitErrorAnnotation(`Checklist item present but unchecked: ${item}`);
+        console.error(`- ✖ ${item}`);
+        emitErrorAnnotation(`Checklist item marked as ✖: ${item}`);
       });
     }
 

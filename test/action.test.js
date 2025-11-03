@@ -22,36 +22,21 @@ test.after(() => {
   fs.writeFileSync(configPath, originalConfigContent, 'utf8');
 });
 
-const rawDataProvider = [
-  'Test line FAIL',
-  'Test line extra data FAIL',
-  '[] Test line FAIL',
-  '[ ] Test line FAIL',
-  '[x] Test line PASS',
-  '[X] Test line PASS',
-];
+test('Checklist status permutations', () => {
+  // Exercise every accepted status along with representative invalid inputs.
+  const scenarios = [
+    { line: '- [✔] Test line', expectation: 'PASS' },
+    { line: '- [✖] Test line', expectation: 'FAIL' },
+    { line: '- [NA] Test line', expectation: 'PASS' },
+    { line: '- [na] Test line', expectation: 'PASS' },
+    { line: '- [x] Test line', expectation: 'FAIL' },
+    { line: '- [ ] Test line', expectation: 'FAIL' },
+    { line: '- [pending] Test line', expectation: 'FAIL' },
+    { line: '- Test line', expectation: 'FAIL' },
+  ];
 
-function buildChecklistLine(template) {
-  let normalized = template;
-
-  if (normalized.startsWith('[]')) {
-    normalized = normalized.replace('[]', '[ ]');
-  }
-
-  if (normalized.startsWith('[')) {
-    return `- ${normalized}`;
-  }
-
-  return `- [ ] ${normalized}`;
-}
-
-for (const entry of rawDataProvider) {
-  const expectation = entry.endsWith('PASS') ? 'PASS' : 'FAIL';
-  const template = entry.slice(0, -expectation.length).trim();
-  const checklistLine = buildChecklistLine(template);
-  const prBody = `${checklistLine}\n`;
-
-  test(`Checklist "${template}" should ${expectation}`, () => {
+  for (const { line, expectation } of scenarios) {
+    const prBody = `${line}\n`;
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
     const eventPath = path.join(tmpDir, 'event.json');
     const payload = {
@@ -74,17 +59,50 @@ for (const entry of rawDataProvider) {
       assert.strictEqual(
         result.status,
         0,
-        `Expected success, stdout: ${result.stdout}, stderr: ${result.stderr}`
+        `Scenario "${line}" expected PASS, stdout: ${result.stdout}, stderr: ${result.stderr}`
       );
     } else {
       assert.notStrictEqual(
         result.status,
         0,
-        `Expected failure but received success. stdout: ${result.stdout}, stderr: ${result.stderr}`
+        `Scenario "${line}" expected FAIL but exited 0. stdout: ${result.stdout}, stderr: ${result.stderr}`
       );
     }
+  }
+});
+
+test('Checklist handles multi-line PR bodies', () => {
+  const prBody = [
+    'Summary of changes',
+    '- plain bullet without brackets',
+    '- [✔] Test line',
+    'Follow-up notes and links',
+  ].join('\n');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
+  const eventPath = path.join(tmpDir, 'event.json');
+  const payload = {
+    pull_request: {
+      body: prBody,
+    },
+  };
+
+  fs.writeFileSync(eventPath, JSON.stringify(payload), 'utf8');
+
+  const result = spawnSync(process.execPath, [actionEntry], {
+    env: {
+      ...process.env,
+      GITHUB_EVENT_PATH: eventPath,
+    },
+    encoding: 'utf8',
   });
-}
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `Expected mixed-content PR body to pass. stdout: ${result.stdout}, stderr: ${result.stderr}`
+  );
+});
 
 test('Checklist item missing from PR body should FAIL', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
