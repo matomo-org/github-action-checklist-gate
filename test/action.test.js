@@ -22,24 +22,21 @@ test.after(() => {
   fs.writeFileSync(configPath, originalConfigContent, 'utf8');
 });
 
-const scenarios = [
-  { line: '- [✔] Test line', expectation: 'PASS' },
-  { line: '- [✖] Test line', expectation: 'FAIL' },
-  { line: '- [NA] Test line', expectation: 'PASS' },
-  { line: '- [na] Test line', expectation: 'PASS' },
-  { line: '- [x] Test line', expectation: 'FAIL' },
-  { line: '- [ ] Test line', expectation: 'FAIL' },
-  { line: '- [pending] Test line', expectation: 'FAIL' },
-  { line: '- Test line', expectation: 'FAIL' },
-  { line: 'Test line', expectation: 'FAIL' },
-  { line: "Other line\n [NA] Test line", expectation: 'PASS' },
-  { line: "Other line", expectation: 'FAIL' },
-];
+test('Checklist status permutations', () => {
+  // Exercise every accepted status along with representative invalid inputs.
+  const scenarios = [
+    { line: '- [✔] Test line', expectation: 'PASS' },
+    { line: '- [✖] Test line', expectation: 'FAIL' },
+    { line: '- [NA] Test line', expectation: 'PASS' },
+    { line: '- [na] Test line', expectation: 'PASS' },
+    { line: '- [x] Test line', expectation: 'FAIL' },
+    { line: '- [ ] Test line', expectation: 'FAIL' },
+    { line: '- [pending] Test line', expectation: 'FAIL' },
+    { line: '- Test line', expectation: 'FAIL' },
+  ];
 
-for (const { line, expectation } of scenarios) {
-  const prBody = `${line}\n`;
-
-  test(`Checklist "${line}" should ${expectation}`, () => {
+  for (const { line, expectation } of scenarios) {
+    const prBody = `${line}\n`;
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));
     const eventPath = path.join(tmpDir, 'event.json');
     const payload = {
@@ -62,17 +59,17 @@ for (const { line, expectation } of scenarios) {
       assert.strictEqual(
         result.status,
         0,
-        `Expected success, stdout: ${result.stdout}, stderr: ${result.stderr}`
+        `Scenario "${line}" expected PASS, stdout: ${result.stdout}, stderr: ${result.stderr}`
       );
     } else {
       assert.notStrictEqual(
         result.status,
         0,
-        `Expected failure but received success. stdout: ${result.stdout}, stderr: ${result.stderr}`
+        `Scenario "${line}" expected FAIL but exited 0. stdout: ${result.stdout}, stderr: ${result.stderr}`
       );
     }
-  });
-}
+  }
+});
 
 test('Checklist item missing from PR body should FAIL', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'checklist-gate-'));

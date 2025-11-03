@@ -60,6 +60,7 @@ function extractChecklistEntries(prBody) {
 
 // Parse a Markdown checklist line into a structured record or null if unsupported.
 function parseChecklistLine(line) {
+  // Accept Markdown list items containing a single status token inside the brackets, e.g. "- [✔] Label".
   const match = line.match(/^[-*]\s*\[([^\]]+)\]\s*(.+)$/);
   if (!match) {
     return null;
@@ -76,6 +77,7 @@ function parseChecklistLine(line) {
 }
 
 function normalizeStatus(status) {
+  // Map the allowed glyphs/keywords to semantic buckets for easier evaluation.
   if (status === '✔') {
     return 'complete';
   }
@@ -112,6 +114,7 @@ function evaluateChecklist(configuredItems, checklistLines) {
     let hasValidStatus = false;
 
     for (const entry of matches) {
+      // Track whether we encountered any unsupported status values so we can report them explicitly.
       const normalized = normalizeStatus(entry.status);
       if (normalized === 'invalid') {
         invalidStatuses.add(entry.status || '(empty)');
