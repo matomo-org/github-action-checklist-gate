@@ -7,7 +7,7 @@ This action ensures that pull requests cannot be merged until required checklist
 The action reads the enforced checklist items from `config/checklist-items.txt`. When a pull request includes any of those labels in its description, the action verifies that each one is annotated with exactly one of the following status values inside the brackets:
 
 - `✔` — completed, treated as a pass
-- `✖` — not complete, treated as a pass
+- `✖` — not complete, treated as a pass - sometimes we legitimately may want to answer in the negative.
 - `NA` or `na` — not applicable, treated as a pass
 
 
@@ -15,21 +15,7 @@ Checklist entries that are not present in the PR description also trigger a fail
 
 ## Usage
 
-```yaml
-name: Checklist Gate
-
-on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
-
-jobs:
-  enforce-checklist:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Enforce PR checklist
-        uses: ./
-```
+See .github/workflows/matomo-ai-checklist.yml as an example usage (this repo checks it's own PR bodies).
 
 ## Testing
 
