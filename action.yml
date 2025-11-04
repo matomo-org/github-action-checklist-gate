@@ -1,0 +1,6 @@
+name: 'Checklist Gate'
+description: 'Fail pull requests when required checklist items are present but not checked'
+author: 'Your Name'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
