@@ -27,10 +27,13 @@ test('Checklist status permutations', () => {
   const scenarios = [
     { line: '- [✔] Test line', expectation: 'PASS' },
     { line: '- [✖] Test line', expectation: 'PASS' },
+    { line: '- [✔] Test line.', expectation: 'PASS' },
+    { line: '- [✔] Test line with extra context', expectation: 'PASS' },
     { line: '- [NA] Test line', expectation: 'PASS' },
     { line: '- [Na] Test line', expectation: 'PASS' },
     { line: '- [na] Test line', expectation: 'PASS' },
     { line: '- [x] Test line', expectation: 'FAIL' },
+    { line: '- [ ] Test line with extra context', expectation: 'FAIL' },
     { line: '- [ ] Test line', expectation: 'FAIL' },
     { line: '- [] Test line', expectation: 'FAIL' },
     { line: '- [pending] Test line', expectation: 'FAIL' },

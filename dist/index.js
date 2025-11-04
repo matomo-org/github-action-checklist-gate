@@ -96,10 +96,12 @@ function evaluateChecklist(configuredItems, checklistLines) {
   const missingItems = [];
   const invalidStatusItems = [];
 
+  const parsedEntries = checklistLines
+    .map((line) => parseChecklistLine(line))
+    .filter((entry) => entry);
+
   for (const item of configuredItems) {
-    const matches = checklistLines
-      .map((line) => parseChecklistLine(line))
-      .filter((entry) => entry && entry.label === item);
+    const matches = parsedEntries.filter((entry) => entry.label.includes(item));
 
     if (matches.length === 0) {
       missingItems.push(item);
