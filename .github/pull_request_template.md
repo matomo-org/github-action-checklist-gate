@@ -14,6 +14,6 @@
 
 ## Checklist
 
-- [✔/✖/NA] I have understood, reviewed, and tested all AI outputs before use.
-- [✔/✖/NA] All AI instructions respect security, IP, and privacy rules.
+- [✔/✖/NA] I have understood, reviewed, and tested all AI outputs before use
+- [✔/✖/NA] All AI instructions respect security, IP, and privacy rules
 
