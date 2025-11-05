@@ -15,7 +15,7 @@ Checklist entries that are not present in the PR description also trigger a fail
 
 ## Usage
 
-See .github/workflows/matomo-ai-checklist.yml as an example usage (this repo checks it's own PR bodies).
+See .github/workflows/matomo-ai-checklist.yml as an example usage (this repo checks its own PR bodies).
 
 ## Testing
 
