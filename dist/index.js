@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// Parse newline-delimited checklist configuration into trimmed entries.
-function parseChecklistConfig(raw) {
+// Parse newline-delimited configuration into trimmed entries.
+function parseConfigFile(raw) {
   return raw
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -20,7 +20,7 @@ function loadConfiguredItems() {
     process.exit(1);
   }
 
-  const configuredItems = parseChecklistConfig(raw);
+  const configuredItems = parseConfigFile(raw);
   if (configuredItems.length === 0) {
     console.error(`Checklist config at ${configPath} is empty. Add at least one checklist line.`);
     process.exit(1);
@@ -51,6 +51,29 @@ function readPullRequestBody() {
   }
 
   return typeof payload.pull_request.body === 'string' ? payload.pull_request.body : '';
+}
+
+function readPullRequestUserLogin() {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath) {
+    console.error('GITHUB_EVENT_PATH is not set. Cannot read event payload.');
+    process.exit(1);
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
+  } catch (error) {
+    console.error(`Failed to parse event payload from ${eventPath}: ${error.message}`);
+    process.exit(1);
+  }
+
+  if (!payload.pull_request) {
+    console.error('This action only supports pull_request events.');
+    process.exit(1);
+  }
+
+  return typeof payload.pull_request?.user?.login === 'string' ? payload.pull_request.user.login : '';
 }
 
 // Extract checklist candidates line-by-line from the PR description.
@@ -143,8 +166,45 @@ function emitErrorAnnotation(message) {
   console.error(`::error title=Checklist Gate::${message}`);
 }
 
+// Check whether the current PR author is listed in config/excluded-users.txt.
+function checkUserIsExcludedFromGate(userLogin) {
+  if (!userLogin) {
+    return false;
+  }
+
+  const excludedUsersPath = path.resolve(__dirname, '../config/excluded-users.txt');
+
+  try {
+    raw = fs.readFileSync(excludedUsersPath, 'utf8');
+  } catch (error) {
+    console.error(`Failed to read excluded users config at ${excludedUsersPath}: ${error.message}`);
+    process.exit(1);
+  }
+
+  const excludedUsers = parseConfigFile(raw);
+  if (excludedUsers.length === 0) {
+    return false;
+  }
+
+  const isExcluded = excludedUsers.includes(userLogin);
+
+  if (isExcluded) {
+    console.log(`Skipping checklist gate for excluded user: ${userLogin}`);
+  }
+
+  return isExcluded;
+}
+
+
 // Entrypoint for the action: load config, evaluate PR body, and fail if needed.
 function main() {
+  const prUserLogin = readPullRequestUserLogin();
+
+  if (checkUserIsExcludedFromGate(prUserLogin)) {
+    console.log('Checklist gate skipped for excluded user.');
+    return;
+  }
+
   const configuredItems = loadConfiguredItems();
   const prBody = readPullRequestBody();
   const checklistLines = extractChecklistEntries(prBody);
