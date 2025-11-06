@@ -2,3 +2,4 @@ dependabot
 dependabot[bot]
 weblate
 innocraft-deploys
+james-hill-matomo
