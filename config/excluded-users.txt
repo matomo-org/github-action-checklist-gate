@@ -2,4 +2,3 @@ dependabot
 dependabot[bot]
 weblate
 innocraft-deploys
-michalkleiner
